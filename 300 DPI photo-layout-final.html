@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Photo Layout Studio</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:Arial,sans-serif;background:#e8eaf0;overflow:hidden;}
+#topbar{height:36px;background:#1976D2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:bold;flex-shrink:0;}
+#app{display:flex;height:calc(100vh - 36px);}
+
+/* LEFT */
+#left{width:330px;min-width:280px;background:#fff;border-right:1px solid #ddd;overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:5px;}
+#left::-webkit-scrollbar{width:4px;}
+#left::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px;}
+
+/* RIGHT */
+#right{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px;overflow-y:auto;background:#f0f2f5;}
+
+/* CARD */
+.card{background:#f7f9fc;border:1px solid #dde3ee;border-radius:7px;padding:6px 9px;}
+.card h3{font-size:0.73rem;color:#1976D2;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;border-bottom:1px solid #dde3ee;padding-bottom:3px;}
+
+/* UPLOAD */
+input[type=file]{width:100%;padding:4px;border:2px dashed #aaa;border-radius:5px;cursor:pointer;background:#fff;font-size:0.78rem;}
+.rmbg{display:inline-block;margin-top:4px;background:#4CAF50;color:#fff;padding:3px 9px;border-radius:4px;text-decoration:none;font-size:0.73rem;}
+
+/* BG COLORS */
+.bgrow{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.cp{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid #ccc;transition:transform .1s;flex-shrink:0;}
+.cp:hover{transform:scale(1.2);border-color:#555;}
+.bgrow input[type=color]{width:26px;height:26px;border:none;cursor:pointer;border-radius:4px;padding:1px;}
+
+/* CROP */
+#cropWrap{position:relative;overflow:hidden;background:#222;border-radius:5px;display:none;cursor:crosshair;user-select:none;}
+#cropWrap img{display:block;width:100%;height:auto;}
+#cropBox{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;}
+#cropHandles span{position:absolute;width:10px;height:10px;background:#fff;border:1px solid #1976D2;border-radius:2px;}
+#cropHandles .h-tl{top:-5px;left:-5px;cursor:nw-resize;}
+#cropHandles .h-tr{top:-5px;right:-5px;cursor:ne-resize;}
+#cropHandles .h-bl{bottom:-5px;left:-5px;cursor:sw-resize;}
+#cropHandles .h-br{bottom:-5px;right:-5px;cursor:se-resize;}
+.crop-nudge{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.crop-nudge button{flex:1;min-width:40px;padding:3px 0;font-size:0.72rem;border:1px solid #bbb;background:#f0f0f0;border-radius:4px;cursor:pointer;}
+.crop-nudge button:hover{background:#ddd;}
+
+/* FILTERS */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.frow{display:flex;flex-direction:column;gap:1px;}
+.frow label{font-size:0.7rem;color:#555;}
+.frow input[type=range]{accent-color:#1976D2;width:100%;height:3px;}
+
+/* BUTTONS */
+.btn{padding:4px 9px;border:none;border-radius:5px;cursor:pointer;font-size:0.73rem;font-weight:bold;transition:background .2s;}
+.bb{background:#1976D2;color:#fff;} .bb:hover{background:#1255a0;}
+.bg{background:#388E3C;color:#fff;} .bg:hover{background:#256427;}
+.bo{background:#F57C00;color:#fff;} .bo:hover{background:#bf6200;}
+.bx{background:#757575;color:#fff;} .bx:hover{background:#555;}
+.brow{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
+
+/* PAGE TYPE */
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;}
+.r2 label,.r1 label{display:flex;align-items:center;gap:5px;font-size:0.75rem;color:#333;cursor:pointer;}
+.r2 input,.r1 input{accent-color:#1976D2;width:13px;height:13px;}
+.hint{font-size:0.68rem;color:#999;}
+
+/* PHOTO SIZE – checkboxes */
+.szgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-bottom:6px;}
+.szgrid label{display:flex;align-items:center;gap:5px;font-size:0.75rem;color:#333;cursor:pointer;background:#f0f4ff;border:1px solid #c5d4f0;border-radius:4px;padding:3px 5px;}
+.szgrid label:hover{background:#dce8ff;}
+.szgrid label.selected{background:#1976D2;color:#fff;border-color:#1255a0;}
+.szgrid input[type=checkbox]{accent-color:#1976D2;width:13px;height:13px;}
+.mix-hint{font-size:0.7rem;color:#888;margin-top:2px;}
+
+/* THUMBNAIL */
+#previewImg{max-width:70px;max-height:90px;border-radius:4px;display:none;border:2px solid #1976D2;margin-left:auto;}
+
+/* GENERATE / DOWNLOAD */
+#generateBtn{width:100%;padding:8px;font-size:0.92rem;background:#1976D2;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:3px;}
+#generateBtn:hover{background:#1255a0;}
+#downloadBtn{width:100%;padding:8px;font-size:0.92rem;background:#388E3C;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:4px;}
+#downloadBtn:hover{background:#256427;}
+
+/* RIGHT PANEL */
+#status{font-size:0.78rem;color:#555;margin-bottom:6px;min-height:18px;text-align:center;}
+#sheetCanvas{border:1px solid #bbb;border-radius:4px;background:#fff;max-width:100%;}
+</style>
+</head>
+<body>
+<div id="topbar">📸 Photo Layout Studio</div>
+<div id="app">
+
+<!-- ══ LEFT ══ -->
+<div id="left">
+
+  <!-- Upload -->
+  <div class="card">
+    <h3>📁 Upload Photo</h3>
+    <input type="file" id="uploadInput" accept="image/*"/>
+    <a class="rmbg" href="https://www.remove.bg" target="_blank">🔍 Remove Background (remove.bg)</a>
+  </div>
+
+  <!-- BG Color -->
+  <div class="card">
+    <h3>🎨 Background Color</h3>
+    <div class="bgrow">
+      <div class="cp" style="background:#fff;"        title="White"      onclick="setBg('#FFFFFF')"></div>
+      <div class="cp" style="background:#D0E8FF;"     title="Light Blue" onclick="setBg('#D0E8FF')"></div>
+      <div class="cp" style="background:#4682B4;"     title="Blue"       onclick="setBg('#4682B4')"></div>
+      <div class="cp" style="background:#808080;"     title="Gray"       onclick="setBg('#808080')"></div>
+      <div class="cp" style="background:#000;border-color:#999;" title="Black" onclick="setBg('#000000')"></div>
+      <div class="cp" style="background:#F5DEB3;"     title="Cream"      onclick="setBg('#F5DEB3')"></div>
+      <input type="color" id="bgColorPicker" value="#FFFFFF" onchange="setBg(this.value)"/>
+      <span style="font-size:.68rem;color:#999;">Custom</span>
+    </div>
+  </div>
+
+  <!-- Crop -->
+  <div class="card">
+    <h3>✂️ Crop Photo</h3>
+    <!-- Full image preview with draggable+resizable crop box -->
+    <div id="cropWrap">
+      <img id="cropImg" alt=""/>
+      <div id="cropBox">
+        <div id="cropHandles">
+          <span class="h-tl" data-h="tl"></span>
+          <span class="h-tr" data-h="tr"></span>
+          <span class="h-bl" data-h="bl"></span>
+          <span class="h-br" data-h="br"></span>
+        </div>
+      </div>
+    </div>
+    <!-- Nudge controls -->
+    <div class="crop-nudge" id="cropNudge" style="display:none;">
+      <button onclick="nudge('left')">◀ Left</button>
+      <button onclick="nudge('right')">Right ▶</button>
+      <button onclick="nudge('up')">▲ Up</button>
+      <button onclick="nudge('down')">▼ Down</button>
+      <button onclick="nudge('wider')">↔ Wider</button>
+      <button onclick="nudge('narrower')">↕ Narrower</button>
+    </div>
+    <div class="brow">
+      <button class="btn bb" onclick="enableCrop()">✂️ Enable</button>
+      <button class="btn bg" onclick="applyCrop()">✅ Apply</button>
+      <button class="btn bx" onclick="resetCrop()">↩ Reset</button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card">
+    <h3>🖼️ Filters</h3>
+    <div class="fgrid">
+      <div class="frow"><label>Brightness <span id="brightVal">100</span>%</label><input type="range" id="brightness" min="0" max="200" value="100" oninput="updateFilters()"/></div>
+      <div class="frow"><label>Contrast <span id="contrastVal">100</span>%</label><input type="range" id="contrast" min="0" max="200" value="100" oninput="updateFilters()"/></div>
+      <div class="frow"><label>Saturation <span id="satVal">100</span>%</label><input type="range" id="saturation" min="0" max="200" value="100" oninput="updateFilters()"/></div>
+      <div class="frow"><label>Sharpness <span id="sharpVal">0</span></label><input type="range" id="sharpness" min="0" max="10" value="0" oninput="updateFilters()"/></div>
+    </div>
+    <div class="brow">
+      <button class="btn bo" onclick="autoEnhance()">🎨 Auto Enhance</button>
+      <button class="btn bx" onclick="resetFilters()">↩ Reset</button>
+      <img id="previewImg" alt="preview"/>
+    </div>
+  </div>
+
+  <!-- Page Type -->
+  <div class="card">
+    <h3>📄 Page Type</h3>
+    <div class="r2">
+      <label><input type="radio" name="pageType" value="4R" checked/> 4R <span class="hint">(10.2×15.2)</span></label>
+      <label><input type="radio" name="pageType" value="A6"/> A6 <span class="hint">(10.5×14.8)</span></label>
+      <label><input type="radio" name="pageType" value="A5"/> A5 <span class="hint">(14.8×21.0)</span></label>
+      <label><input type="radio" name="pageType" value="A4"/> A4 <span class="hint">(21.0×29.7)</span></label>
+    </div>
+  </div>
+
+  <!-- Photo Size — checkboxes, multi-select -->
+  <div class="card">
+    <h3>📐 Photo Sizes <span class="hint">(ek ya zyada select karo)</span></h3>
+
+    <!-- Mix Preset Buttons -->
+    <div style="margin-bottom:6px;">
+      <div style="font-size:0.7rem;color:#1976D2;font-weight:bold;margin-bottom:4px;">⚡ Quick Select:</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="btn bb" style="font-size:0.68rem;padding:3px 7px;" onclick="setMix('mix4')">🔀 Mix (4 Lines)</button>
+        <button class="btn bb" style="font-size:0.68rem;padding:3px 7px;" onclick="setMix('all')">✅ All Sizes</button>
+        <button class="btn bx" style="font-size:0.68rem;padding:3px 7px;" onclick="setMix('none')">✖ Clear All</button>
+      </div>
+    </div>
+
+    <div class="szgrid" id="sizeGrid">
+      <label><input type="checkbox" value="4x5"   /> 4×5cm<br/><span class="hint">Large</span></label>
+      <label><input type="checkbox" value="3.3x4.5" checked/> 3.3×4.5cm<br/><span class="hint">Passport</span></label>
+      <label><input type="checkbox" value="3x3.7" /> 3×3.7cm<br/><span class="hint">ID Card</span></label>
+      <label><input type="checkbox" value="2.5x3" /> 2.5×3cm<br/><span class="hint">Small ID</span></label>
+      <label><input type="checkbox" value="2x2.5" /> 2×2.5cm<br/><span class="hint">Stamp</span></label>
+    </div>
+    <div class="mix-hint">💡 Multiple sizes select karo — sheet par row-wise aayenge</div>
+  </div>
+
+  <button id="generateBtn" onclick="generateLayout()">▶ GENERATE LAYOUT</button>
+  <button id="downloadBtn" onclick="downloadImage()">📥 Download (300 DPI)</button>
+
+</div><!-- end left -->
+
+<!-- ══ RIGHT ══ -->
+<div id="right">
+  <div id="status">Photo upload karo aur Generate Layout click karo.</div>
+  <canvas id="sheetCanvas"></canvas>
+</div>
+
+</div><!-- end app -->
+<canvas id="filterCanvas" style="display:none;"></canvas>
+</body>
+</html>
+
+<script>
+// ══ STATE ══
+let originalImage = null;
+let croppedImage  = null;
+let bgColor = '#FFFFFF';
+const DPI = 118.11; // 300dpi px/cm
+
+// ══ UPLOAD ══
+document.getElementById('uploadInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = function(){
+      originalImage = img;
+      croppedImage  = img;
+      // Show image in crop area
+      const ci = document.getElementById('cropImg');
+      ci.src = ev.target.result;
+      updateFilterPreview();
+      setStatus('✅ Image loaded.');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ══ BG COLOR ══
+function setBg(color){
+  bgColor = color;
+  document.getElementById('bgColorPicker').value = color;
+  updateFilterPreview();
+  const c = document.getElementById('sheetCanvas');
+  if(c.width && c.height && (croppedImage||originalImage)) generateLayout();
+}
+
+// ══ FILTERS ══
+function updateFilters(){
+  document.getElementById('brightVal').textContent  = document.getElementById('brightness').value;
+  document.getElementById('contrastVal').textContent= document.getElementById('contrast').value;
+  document.getElementById('satVal').textContent     = document.getElementById('saturation').value;
+  document.getElementById('sharpVal').textContent   = document.getElementById('sharpness').value;
+  updateFilterPreview();
+}
+function resetFilters(){
+  document.getElementById('brightness').value=100;
+  document.getElementById('contrast').value=100;
+  document.getElementById('saturation').value=100;
+  document.getElementById('sharpness').value=0;
+  updateFilters();
+}
+function autoEnhance(){
+  document.getElementById('brightness').value=110;
+  document.getElementById('contrast').value=115;
+  document.getElementById('saturation').value=105;
+  document.getElementById('sharpness').value=3;
+  updateFilters();
+  setStatus('✨ Auto Enhance applied!');
+}
+function applyFiltersToCanvas(srcImg, outW, outH){
+  const fc = document.createElement('canvas');
+  fc.width=outW; fc.height=outH;
+  const ctx = fc.getContext('2d');
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0,0,outW,outH);
+  ctx.save();
+  const b=document.getElementById('brightness').value;
+  const c=document.getElementById('contrast').value;
+  const s=document.getElementById('saturation').value;
+  ctx.filter=`brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+  ctx.drawImage(srcImg,0,0,outW,outH);
+  ctx.restore();
+  const sharp=parseInt(document.getElementById('sharpness').value);
+  if(sharp>0){
+    const amt=sharp*0.15;
+    const id=ctx.getImageData(0,0,outW,outH);
+    applyConvolution(ctx,id,[0,-amt,0,-amt,1+4*amt,-amt,0,-amt,0],outW,outH);
+  }
+  return fc;
+}
+function applyConvolution(ctx,imgData,kernel,w,h){
+  const src=imgData.data, out=new Uint8ClampedArray(src.length);
+  for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){
+    const idx=(y*w+x)*4;
+    for(let ch=0;ch<3;ch++){
+      let sum=0;
+      for(let ky=-1;ky<=1;ky++) for(let kx=-1;kx<=1;kx++)
+        sum+=src[((y+ky)*w+(x+kx))*4+ch]*kernel[(ky+1)*3+(kx+1)];
+      out[idx+ch]=Math.min(255,Math.max(0,sum));
+    }
+    out[idx+3]=src[idx+3];
+  }
+  ctx.putImageData(new ImageData(out,w,h),0,0);
+}
+function updateFilterPreview(){
+  const src=croppedImage||originalImage;
+  if(!src) return;
+  const fc=applyFiltersToCanvas(src,src.width,src.height);
+  const prev=document.getElementById('previewImg');
+  prev.src=fc.toDataURL('image/png');
+  prev.style.display='inline-block';
+}
+
+// ══ SIZE CHECKBOX HIGHLIGHT ══
+document.querySelectorAll('#sizeGrid label').forEach(function(lbl){
+  const cb = lbl.querySelector('input[type=checkbox]');
+  if(cb.checked) lbl.classList.add('selected');
+  cb.addEventListener('change', function(){
+    lbl.classList.toggle('selected', cb.checked);
+  });
+});
+
+// ══ MIX PRESETS ══
+function setMix(preset){
+  const presets = {
+    // Mix: 4 sizes — 3.3x4.5, 3x3.7, 2.5x3, 2x2.5
+    'mix4': ['3.3x4.5','3x3.7','2.5x3','2x2.5'],
+    // All 5 sizes
+    'all':  ['4x5','3.3x4.5','3x3.7','2.5x3','2x2.5'],
+    'none': []
+  };
+  const selected = presets[preset] || [];
+  document.querySelectorAll('#sizeGrid label').forEach(function(lbl){
+    const cb  = lbl.querySelector('input[type=checkbox]');
+    cb.checked = selected.includes(cb.value);
+    lbl.classList.toggle('selected', cb.checked);
+  });
+}
+</script>
+
+<script>
+// ══ CROP — full preview + draggable + resizable + nudge ══
+let cropActive=false, cropBoxX=0, cropBoxY=0, cropBoxW=0, cropBoxH=0;
+let dragMode=null; // 'move' | 'tl'|'tr'|'bl'|'br'
+let dragSX=0, dragSY=0, dragOrigX=0, dragOrigY=0, dragOrigW=0, dragOrigH=0;
+let wrapW=0, wrapH=0; // display size of cropWrap
+
+function enableCrop(){
+  if(!originalImage){ alert('Pehle photo upload karein!'); return; }
+  const wrap=document.getElementById('cropWrap');
+  const ci=document.getElementById('cropImg');
+  ci.src=originalImage.src;
+  wrap.style.display='block';
+  document.getElementById('cropNudge').style.display='flex';
+  cropActive=true;
+
+  // Wait for image to render then init box
+  setTimeout(function(){
+    wrapW=wrap.offsetWidth;
+    wrapH=ci.offsetHeight;
+    wrap.style.height=wrapH+'px';
+    // Default box: center 70% of image
+    cropBoxW=wrapW*0.7; cropBoxH=wrapH*0.7;
+    cropBoxX=(wrapW-cropBoxW)/2; cropBoxY=(wrapH-cropBoxH)/2;
+    drawCropBox();
+    setStatus('Drag box to move, drag corner handles to resize. Nudge buttons bhi hain.');
+  }, 80);
+}
+
+function drawCropBox(){
+  const box=document.getElementById('cropBox');
+  box.style.left=cropBoxX+'px'; box.style.top=cropBoxY+'px';
+  box.style.width=cropBoxW+'px'; box.style.height=cropBoxH+'px';
+  box.style.display='block';
+}
+
+// Mouse events on cropBox (move)
+document.addEventListener('DOMContentLoaded', function(){
+  const box=document.getElementById('cropBox');
+
+  box.addEventListener('mousedown', function(e){
+    if(e.target.dataset.h) return; // handle click handled below
+    dragMode='move';
+    dragSX=e.clientX; dragSY=e.clientY;
+    dragOrigX=cropBoxX; dragOrigY=cropBoxY;
+    e.preventDefault();
+  });
+
+  // Corner handle mousedown
+  document.getElementById('cropHandles').querySelectorAll('span').forEach(function(h){
+    h.addEventListener('mousedown', function(e){
+      dragMode=e.target.dataset.h;
+      dragSX=e.clientX; dragSY=e.clientY;
+      dragOrigX=cropBoxX; dragOrigY=cropBoxY;
+      dragOrigW=cropBoxW; dragOrigH=cropBoxH;
+      e.preventDefault(); e.stopPropagation();
+    });
+  });
+
+  document.addEventListener('mousemove', function(e){
+    if(!dragMode) return;
+    const dx=e.clientX-dragSX, dy=e.clientY-dragSY;
+    const minSz=30;
+    if(dragMode==='move'){
+      cropBoxX=Math.max(0,Math.min(dragOrigX+dx, wrapW-cropBoxW));
+      cropBoxY=Math.max(0,Math.min(dragOrigY+dy, wrapH-cropBoxH));
+    } else if(dragMode==='br'){
+      cropBoxW=Math.max(minSz, dragOrigW+dx);
+      cropBoxH=Math.max(minSz, dragOrigH+dy);
+    } else if(dragMode==='tl'){
+      const nw=Math.max(minSz,dragOrigW-dx), nh=Math.max(minSz,dragOrigH-dy);
+      cropBoxX=dragOrigX+(dragOrigW-nw); cropBoxY=dragOrigY+(dragOrigH-nh);
+      cropBoxW=nw; cropBoxH=nh;
+    } else if(dragMode==='tr'){
+      const nw=Math.max(minSz,dragOrigW+dx), nh=Math.max(minSz,dragOrigH-dy);
+      cropBoxY=dragOrigY+(dragOrigH-nh);
+      cropBoxW=nw; cropBoxH=nh;
+    } else if(dragMode==='bl'){
+      const nw=Math.max(minSz,dragOrigW-dx), nh=Math.max(minSz,dragOrigH+dy);
+      cropBoxX=dragOrigX+(dragOrigW-nw);
+      cropBoxW=nw; cropBoxH=nh;
+    }
+    // clamp to wrap bounds
+    cropBoxX=Math.max(0,Math.min(cropBoxX,wrapW-cropBoxW));
+    cropBoxY=Math.max(0,Math.min(cropBoxY,wrapH-cropBoxH));
+    cropBoxW=Math.min(cropBoxW,wrapW-cropBoxX);
+    cropBoxH=Math.min(cropBoxH,wrapH-cropBoxY);
+    drawCropBox();
+  });
+
+  document.addEventListener('mouseup', function(){ dragMode=null; });
+});
+
+function nudge(dir){
+  const step=5;
+  if(dir==='left')     cropBoxX=Math.max(0,cropBoxX-step);
+  if(dir==='right')    cropBoxX=Math.min(wrapW-cropBoxW,cropBoxX+step);
+  if(dir==='up')       cropBoxY=Math.max(0,cropBoxY-step);
+  if(dir==='down')     cropBoxY=Math.min(wrapH-cropBoxH,cropBoxY+step);
+  if(dir==='wider')  { cropBoxW=Math.min(wrapW-cropBoxX,cropBoxW+step*2); }
+  if(dir==='narrower'){ cropBoxH=Math.max(30,cropBoxH-step*2); }
+  drawCropBox();
+}
+
+function applyCrop(){
+  if(!cropActive||!originalImage) return;
+  const ci=document.getElementById('cropImg');
+  const scaleX=originalImage.width/ci.clientWidth;
+  const scaleY=originalImage.height/ci.clientHeight;
+  const sx=cropBoxX*scaleX, sy=cropBoxY*scaleY;
+  const sw=cropBoxW*scaleX, sh=cropBoxH*scaleY;
+  const fc=document.createElement('canvas');
+  fc.width=sw; fc.height=sh;
+  const ctx=fc.getContext('2d');
+  ctx.fillStyle=bgColor; ctx.fillRect(0,0,sw,sh);
+  ctx.drawImage(originalImage,sx,sy,sw,sh,0,0,sw,sh);
+  const ni=new Image();
+  ni.onload=function(){
+    croppedImage=ni;
+    updateFilterPreview();
+    setStatus('✅ Crop applied!');
+  };
+  ni.src=fc.toDataURL('image/png');
+  document.getElementById('cropWrap').style.display='none';
+  document.getElementById('cropNudge').style.display='none';
+  cropActive=false;
+}
+
+function resetCrop(){
+  croppedImage=originalImage;
+  document.getElementById('cropWrap').style.display='none';
+  document.getElementById('cropNudge').style.display='none';
+  cropActive=false;
+  updateFilterPreview();
+  setStatus('Crop reset.');
+}
+</script>
+
+<script>
+// ══ GENERATE LAYOUT — multi-size support ══
+function generateLayout(){
+  const src = croppedImage || originalImage;
+  if(!src){ alert('Pehle photo upload karein!'); return; }
+
+  const checked = Array.from(document.querySelectorAll('#sizeGrid input[type=checkbox]:checked'));
+  if(checked.length===0){ alert('Kam se kam ek size select karo!'); return; }
+
+  const pageVal = document.querySelector('input[name="pageType"]:checked').value;
+  const pageSizes = {
+    '4R':{w:10.2,h:15.2}, 'A6':{w:10.5,h:14.8},
+    'A5':{w:14.8,h:21.0}, 'A4':{w:21.0,h:29.7}
+  };
+  const page   = pageSizes[pageVal];
+  const sheetW = Math.round(page.w * DPI);
+  const sheetH = Math.round(page.h * DPI);
+
+  const canvas = document.getElementById('sheetCanvas');
+  canvas.width=sheetW; canvas.height=sheetH;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,sheetW,sheetH);
+
+  // ── Find best margin so all sizes fit, spacing = 0 (photos touch, cut line between them) ──
+  function calcFit(m, sp){
+    return checked.map(function(cb){
+      const [ws,hs] = cb.value.split('x');
+      const pw = parseFloat(ws)*DPI, ph = parseFloat(hs)*DPI;
+      const cols = Math.floor((sheetW - 2*m + sp) / (pw + sp));
+      const rows = Math.floor((sheetH - 2*m + sp) / (ph + sp));
+      const idealCols = Math.floor(page.w / parseFloat(ws));
+      const idealRows = Math.floor(page.h / parseFloat(hs));
+      return { cols, rows, idealCols, idealRows, pw, ph };
+    });
+  }
+
+  // Zero spacing between photos — they share a single cut line
+  const ES = 0;
+  let bestM = Math.round(0.20*DPI);
+  outer: for(let m = Math.round(0.20*DPI); m >= Math.round(0.02*DPI); m -= Math.round(0.01*DPI)){
+    const fits = calcFit(m, ES);
+    const allFit = fits.every(function(f){ return f.cols >= f.idealCols; });
+    if(allFit){ bestM = m; break outer; }
+  }
+  const EM = bestM;
+
+  // ── Build photo positions ──
+  let photos = [];
+
+  if(checked.length === 1){
+    // Single size: center entire grid on sheet
+    const [ws,hs] = checked[0].value.split('x');
+    const pw = parseFloat(ws)*DPI, ph = parseFloat(hs)*DPI;
+    const cols = Math.floor((sheetW - 2*EM + ES) / (pw + ES));
+    const rows = Math.floor((sheetH - 2*EM + ES) / (ph + ES));
+    const gridW = cols*pw + (cols-1)*ES;
+    const gridH = rows*ph + (rows-1)*ES;
+    const sx = Math.round((sheetW - gridW) / 2);
+    const sy = Math.round((sheetH - gridH) / 2);
+    for(let r=0; r<rows; r++){
+      for(let c=0; c<cols; c++){
+        photos.push({ x: sx+c*(pw+ES), y: sy+r*(ph+ES), w: pw, h: ph });
+      }
+    }
+  } else {
+    // Multi-size: each size gets exactly the rows it needs, fills full width, no blank
+    // Order is exactly as checked (checkbox order = display order)
+    // For Mix preset: 3.5x4 → 3x3.5 → 2.5x3 → 2x2.5
+
+    // Calculate total height needed for 1 row of each size
+    const groups = checked.map(function(cb){
+      const [ws,hs] = cb.value.split('x');
+      const pw = parseFloat(ws)*DPI, ph = parseFloat(hs)*DPI;
+      // Max cols that fit in sheet width
+      const cols = Math.max(1, Math.floor((sheetW - 2*EM + ES) / (pw + ES)));
+      return { pw, ph, cols };
+    });
+
+    const totalGroupH = groups.reduce(function(s,g){ return s + g.ph; }, 0);
+    const totalGaps   = (groups.length - 1) * ES;
+    const availH      = sheetH - 2*EM - totalGaps;
+
+    // If 1 row per group fits — use 1 row each
+    // If extra space left — give more rows to largest groups
+    let rowsPerGroup = groups.map(function(){ return 1; });
+
+    // Check if total 1-row height fits
+    if(totalGroupH <= availH){
+      // Try to add extra rows where possible
+      let usedH = totalGroupH;
+      let changed = true;
+      while(changed){
+        changed = false;
+        groups.forEach(function(g, i){
+          const extraNeeded = g.ph + ES;
+          if(usedH + extraNeeded <= availH){
+            rowsPerGroup[i]++;
+            usedH += extraNeeded;
+            changed = true;
+          }
+        });
+      }
+    }
+
+    // Total grid height with assigned rows
+    let totalH = groups.reduce(function(s,g,i){ return s + rowsPerGroup[i]*g.ph + (rowsPerGroup[i]-1)*ES; }, 0)
+               + totalGaps;
+    let curY = Math.round((sheetH - totalH) / 2); // vertically center all groups
+
+    groups.forEach(function(g, gi){
+      const rows   = rowsPerGroup[gi];
+      const gridW  = g.cols*g.pw + (g.cols-1)*ES;
+      const startX = Math.round((sheetW - gridW) / 2);
+
+      for(let r=0; r<rows; r++){
+        const py = curY + r*(g.ph+ES);
+        for(let c=0; c<g.cols; c++){
+          photos.push({ x: startX+c*(g.pw+ES), y: py, w: g.pw, h: g.ph });
+        }
+      }
+      curY += rows*g.ph + (rows-1)*ES + ES; // move down
+    });
+  }
+
+  // ── Draw photos ──
+  const filtered = applyFiltersToCanvas(src, src.width, src.height);
+  const pad = Math.round(0.07*DPI); // equal padding inside box on all 4 sides
+
+  photos.forEach(function(p){
+    // White box
+    ctx.fillStyle='#FFFFFF';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+
+    // Photo — cover fill: scale so photo fills entire box, crop equally from all sides
+    const areaX=p.x+pad, areaY=p.y+pad;
+    const areaW=p.w-2*pad, areaH=p.h-2*pad;
+    // Use 'cover' scaling — fill box completely, crop excess equally (like object-fit:cover)
+    const sc = Math.max(areaW/src.width, areaH/src.height);
+    const dw=src.width*sc, dh=src.height*sc;
+    // Source crop: center of original image
+    const cropSrcW = areaW/sc, cropSrcH = areaH/sc;
+    const cropSrcX = (src.width  - cropSrcW)/2;
+    const cropSrcY = (src.height - cropSrcH)/2;
+    ctx.drawImage(filtered, cropSrcX,cropSrcY,cropSrcW,cropSrcH, areaX,areaY,areaW,areaH);
+
+    // Border — this IS the cut line. When you cut along it, both photos are same size.
+    ctx.strokeStyle='#000000';
+    ctx.lineWidth=0.8;
+    ctx.strokeRect(p.x, p.y, p.w, p.h);
+
+    // No L-shaped cut marks — the border line itself is the cut guide
+  });
+
+  // Scale for display
+  const rh=document.getElementById('right').clientHeight-50;
+  const rw=document.getElementById('right').clientWidth-20;
+  const ds=Math.min(rw/sheetW, rh/sheetH, 1);
+  canvas.style.width=Math.round(sheetW*ds)+'px';
+  canvas.style.height=Math.round(sheetH*ds)+'px';
+  setStatus('✅ '+photos.length+' photos — '+pageVal+' sheet. Download karo!');
+}
+
+// ══ DOWNLOAD ══
+function downloadImage(){
+  const canvas = document.getElementById('sheetCanvas');
+  if(!canvas.width){ alert('Pehle Generate Layout click karein!'); return; }
+  const pageVal = document.querySelector('input[name="pageType"]:checked').value;
+  const a = document.createElement('a');
+  a.download = 'photo-layout-'+pageVal+'-300dpi.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  setStatus('📥 Downloaded!');
+}
+
+function setStatus(msg){ document.getElementById('status').textContent=msg; }
+</script>
